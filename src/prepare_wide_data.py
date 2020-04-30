@@ -46,18 +46,27 @@ country_agg.to_csv( '../results/country_agg.csv', index=False )
 country_agg['Confirmed'] = np.log10( country_agg['Confirmed'], where=0<country_agg['Confirmed'], out=np.nan * np.ones_like( country_agg['Confirmed'] ) )
 country_agg['Recovered'] = np.log( country_agg['Recovered'], where=0<country_agg['Recovered'], out=np.nan * np.ones_like( country_agg['Recovered'] ) )
 country_agg['Deaths'] = np.log( country_agg['Deaths'], where=0<country_agg['Deaths'], out=np.nan * np.ones_like( country_agg['Deaths'] ) )
-country_agg['mortality_rate'] = np.log( country_agg['mortality_rate'], where=0<country_agg['mortality_rate'], out=np.nan * np.ones_like( country_agg['mortality_rate'] ) )
-country_agg['increase_rate'] = np.log( country_agg['increase_rate'], where=0<country_agg['increase_rate'], out=np.nan * np.ones_like( country_agg['increase_rate'] ) )
+country_agg['mortality_rate'] = np.log( country_agg['mortality_rate'], where=0<country_agg['mortality_rate'], out=np.zeros_like( country_agg['mortality_rate'] ) )
+country_agg['increase_rate'] = np.log( country_agg['increase_rate'], where=0<country_agg['increase_rate'], out=np.zeros_like( country_agg['increase_rate'] ) )
 
 print( country_agg )
 country_agg.to_csv( '../results/country_agg_lognorm.csv', index=False )
 
 # long to wide
 Confirmed = country_agg.pivot(index='Date', columns='Country', values='Confirmed')
+Confirmed.to_csv( '../results/Confirmed_lognorm_wide.csv', index=True )
+
 Recovered = country_agg.pivot(index='Date', columns='Country', values='Recovered')
+Recovered.to_csv( '../results/Recovered_lognorm_wide.csv', index=True )
+
 Deaths = country_agg.pivot(index='Date', columns='Country', values='Deaths')
+Deaths.to_csv( '../results/Deaths_lognorm_wide.csv', index=True )
+
 mortality_rate = country_agg.pivot(index='Date', columns='Country', values='mortality_rate')
+mortality_rate.to_csv( '../results/mortality_rate_lognorm_wide.csv', index=True )
+
 increase_rate = country_agg.pivot(index='Date', columns='Country', values='increase_rate')
+increase_rate.to_csv( '../results/increase_rate_lognorm_wide.csv', index=True )
 
 # heatmaps
 f, ax = plt.subplots(figsize=(90, 60))
