@@ -3,9 +3,9 @@
 ## Data Preparation
 
 I obtained the data from https://github.com/datasets/covid-19.
-The data contained one row for each (date, country) combination.
-Each row contained 3 statistics: the number of confirmed cases, deaths and recovered cases.
-Initially, the numbers are zero, and then then gradually increase.
+The data contains one row for each (date, country) combination.
+Each row contains 3 statistics: the number of confirmed cases, deaths and recovered cases.
+Initially, the numbers are zero, and then they gradually increase.
 I derived two more statistics from the data. 
 The first one is `mortality_rate`, which is the ratio of deaths and confirmed cases for a given country on a given date.
 The second one is `increase_rate`, which is the percent increase in confirmed cases for a given country on a given date compared to the previous date.
