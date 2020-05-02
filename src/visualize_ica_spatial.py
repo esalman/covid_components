@@ -7,10 +7,10 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 sns.set()
 
 # inputs
-ncomp = 3
+ncomp = 10
 inpath = '../results/ica_'+str(ncomp)+'/'
-modality = 'mortality'
-# modality = 'increase'
+# modality = 'mortality'
+modality = 'increase'
 ref_path = '../data/covid-19/data/reference.csv'
 outpath = inpath
 

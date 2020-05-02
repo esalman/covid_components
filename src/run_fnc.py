@@ -4,10 +4,10 @@ import seaborn as sns
 from scipy import stats
 
 # inputs
-ncomp = 3
+ncomp = 10
 inpath = '../results/ica_'+str(ncomp)+'/'
-# modality = 'mortality'
-modality = 'increase'
+modality = 'mortality'
+# modality = 'increase'
 outpath = inpath
 
 # setup
