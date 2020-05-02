@@ -2,105 +2,132 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-sns.set()
-cmap = sns.color_palette("YlOrRd", 100)
-plt.close('all')
+from pathlib import Path
+import math
 
 # inputs
 ref_path = '../data/covid-19/data/reference.csv'
 country_agg_path = '../data/covid-19/data/countries-aggregated.csv'
+outpath = '../results/aggregate_data/'
+
+# setup
+sns.set()
+figsize = (120, 60)
+fontsize=60
+cmap = sns.color_palette("YlGnBu", 100)
+plt.close('all')
+Path(outpath).mkdir(parents=True, exist_ok=True)
 
 # load data
 ref = pd.read_csv( ref_path )
 country_agg = pd.read_csv( country_agg_path )
 
+# join
+ref.drop_duplicates(subset='Country_Region', keep="first", inplace=True)
+ref.rename(columns={'Country_Region': 'Country'}, inplace=True)
+ref.set_index('Country', inplace=True) 
+country_agg = country_agg.join( ref[['Population']], on='Country')
+
+# # drop Congo
+# congo = country_agg.loc[ country_agg.iso3=='COG' ].index
+# country_agg.drop( congo, inplace=True )
+
 # get countries from country_agg which is a subset of Country_Region
 countries = country_agg.Country.unique()
 
-# add mortality rate and increase rate columns
-country_agg['mortality_rate'] = 0.0
+# add rate columns
+country_agg['mortality_rate'] = country_agg['Deaths'] / country_agg['Confirmed']
 country_agg['increase_rate'] = 0.0
+country_agg['Confirmed_rate'] = country_agg['Confirmed'] / country_agg['Population']
+country_agg['Recovered_rate'] = country_agg['Recovered'] / country_agg['Population']
+country_agg['Deaths_rate'] = country_agg['Deaths'] / country_agg['Population']
 
+# determine increase_rate
 for cc in countries:
-    cc_idx = country_agg.index[country_agg.Country.str.match(cc)].tolist() 
+    cc_idx = country_agg.index[ country_agg.Country == cc ].tolist() 
     for t1, cc_i in enumerate(cc_idx):
         if t1 == 0:
             continue
-        
-        # # check 
-        # print(t1, cc_i, cc_idx[t1-1])
 
-        # determine mortality_rate
-        t2 = country_agg.loc[cc_i, 'Confirmed']
-        t3 = country_agg.loc[cc_i, 'Deaths']
-        if t2 > 0:
-            country_agg.at[cc_i, 'mortality_rate'] = 100 * t3 / t2
-        
-        # determine increase_rate
         t2 = country_agg.loc[cc_i, 'Confirmed']
         t3 = country_agg.loc[cc_idx[t1-1], 'Confirmed']
         if t3 > 0:
             country_agg.at[cc_i, 'increase_rate'] = 100 * (t2-t3) / t3
-
-# view and save mortality_rate and increase_rate
-print( country_agg )
-country_agg.to_csv( '../results/country_agg.csv', index=False )
-
-country_agg['Confirmed'] = np.log( country_agg['Confirmed'], where=0.0<country_agg['Confirmed'], out=np.nan * np.ones_like( country_agg['Confirmed'] ) )
-country_agg['Recovered'] = np.log( country_agg['Recovered'], where=0.0<country_agg['Recovered'], out=np.nan * np.ones_like( country_agg['Recovered'] ) )
-country_agg['Deaths'] = np.log( country_agg['Deaths'], where=0.0<country_agg['Deaths'], out=np.nan * np.ones_like( country_agg['Deaths'] ) )
+        
+country_agg['Confirmed_rate'] = np.log( country_agg['Confirmed_rate'], where=0.0<country_agg['Confirmed_rate'], out=np.nan * np.ones_like( country_agg['Confirmed_rate'] ) )
+country_agg['Recovered_rate'] = np.log( country_agg['Recovered_rate'], where=0.0<country_agg['Recovered_rate'], out=np.nan * np.ones_like( country_agg['Recovered_rate'] ) )
+country_agg['Deaths_rate'] = np.log( country_agg['Deaths_rate'], where=0.0<country_agg['Deaths_rate'], out=np.nan * np.ones_like( country_agg['Deaths_rate'] ) )
 country_agg['mortality_rate'] = np.log( country_agg['mortality_rate'], where=0.0<country_agg['mortality_rate'], out=np.nan * np.ones_like( country_agg['mortality_rate'] ) )
 country_agg['increase_rate'] = np.log( country_agg['increase_rate'], where=0.0<country_agg['increase_rate'], out=np.nan * np.ones_like( country_agg['increase_rate'] ) )
 
 print( country_agg )
-country_agg.to_csv( '../results/country_agg_lognorm.csv', index=False )
+country_agg.to_csv( outpath+'country_agg_lognorm.csv', index=False )
 
 # long to wide
-Confirmed = country_agg.pivot(index='Date', columns='Country', values='Confirmed')
-Confirmed.to_csv( '../results/Confirmed_lognorm_wide.csv', index=True )
+Confirmed = country_agg.pivot(index='Date', columns='Country', values='Confirmed_rate')
+Confirmed.to_csv( outpath+'Confirmed_lognorm_wide.csv', index=True )
 
-Recovered = country_agg.pivot(index='Date', columns='Country', values='Recovered')
-Recovered.to_csv( '../results/Recovered_lognorm_wide.csv', index=True )
+Recovered = country_agg.pivot(index='Date', columns='Country', values='Recovered_rate')
+Recovered.to_csv( outpath+'Recovered_lognorm_wide.csv', index=True )
 
-Deaths = country_agg.pivot(index='Date', columns='Country', values='Deaths')
-Deaths.to_csv( '../results/Deaths_lognorm_wide.csv', index=True )
+Deaths = country_agg.pivot(index='Date', columns='Country', values='Deaths_rate')
+Deaths.to_csv( outpath+'Deaths_lognorm_wide.csv', index=True )
 
 mortality_rate = country_agg.pivot(index='Date', columns='Country', values='mortality_rate')
-mortality_rate.to_csv( '../results/mortality_rate_lognorm_wide.csv', index=True )
+mortality_rate.to_csv( outpath+'mortality_rate_lognorm_wide.csv', index=True )
 
 increase_rate = country_agg.pivot(index='Date', columns='Country', values='increase_rate')
-increase_rate.to_csv( '../results/increase_rate_lognorm_wide.csv', index=True )
+increase_rate.to_csv( outpath+'increase_rate_lognorm_wide.csv', index=True )
 
 # heatmaps
-f, ax = plt.subplots(figsize=(90, 60))
-sns.heatmap(Confirmed, fmt="d", ax=ax, cmap=cmap)
 print('plotting Confirmed Cases')
-plt.title('Confirmed Cases (logarithmic)')
-f.savefig("../results/confirmed_heatmap.png")
+f, ax = plt.subplots(figsize=figsize)
+ax = sns.heatmap(Confirmed, fmt="d", ax=ax, cmap=cmap)
+ax.set_xlabel( ax.get_xlabel(), fontsize=fontsize)
+ax.set_ylabel( ax.get_ylabel(), fontsize=fontsize)
+cbar = ax.collections[0].colorbar
+cbar.ax.tick_params(labelsize=fontsize)
+plt.title('Confirmed Cases (normalized by population, logarithmic)', fontdict={'fontsize':fontsize})
+f.savefig( outpath+'confirmed_heatmap.png', bbox_inches='tight' )
 
-f, ax = plt.subplots(figsize=(90, 60))
-sns.heatmap(Recovered, fmt="d", ax=ax, cmap=cmap)
 print('plotting Recovered Cases')
-plt.title('Recovered Cases (logarithmic)')
-f.savefig("../results/recovered_heatmap.png")
+f, ax = plt.subplots(figsize=figsize)
+ax = sns.heatmap(Recovered, fmt="d", ax=ax, cmap=cmap)
+ax.set_xlabel( ax.get_xlabel(), fontsize=fontsize)
+ax.set_ylabel( ax.get_ylabel(), fontsize=fontsize)
+cbar = ax.collections[0].colorbar
+cbar.ax.tick_params(labelsize=fontsize)
+plt.title('Recovered Cases (normalized by population, logarithmic)', fontdict={'fontsize':fontsize})
+f.savefig( outpath+'recovered_heatmap.png', bbox_inches='tight' )
 
-f, ax = plt.subplots(figsize=(90, 60))
-sns.heatmap(Deaths, fmt="d", ax=ax, cmap=cmap)
 print('plotting Deaths')
-plt.title('Deaths (logarithmic)')
-f.savefig("../results/deaths_heatmap.png")
+f, ax = plt.subplots(figsize=figsize)
+ax = sns.heatmap(Deaths, fmt="d", ax=ax, cmap=cmap)
+ax.set_xlabel( ax.get_xlabel(), fontsize=fontsize)
+ax.set_ylabel( ax.get_ylabel(), fontsize=fontsize)
+cbar = ax.collections[0].colorbar
+cbar.ax.tick_params(labelsize=fontsize)
+plt.title('Deaths (normalized by population, logarithmic)', fontdict={'fontsize':fontsize})
+f.savefig( outpath+'deaths_heatmap.png', bbox_inches='tight' )
 
-f, ax = plt.subplots(figsize=(90, 60))
-sns.heatmap(mortality_rate, fmt="d", ax=ax, cmap=cmap)
 print('plotting Mortality Rate')
-plt.title('Mortality Rate (logarithmic)')
-f.savefig("../results/mortality_rate_heatmap.png")
+f, ax = plt.subplots(figsize=figsize)
+ax = sns.heatmap(mortality_rate, fmt="d", ax=ax, cmap=cmap)
+ax.set_xlabel( ax.get_xlabel(), fontsize=fontsize)
+ax.set_ylabel( ax.get_ylabel(), fontsize=fontsize)
+cbar = ax.collections[0].colorbar
+cbar.ax.tick_params(labelsize=fontsize)
+plt.title('Mortality Rate (logarithmic)', fontdict={'fontsize':fontsize})
+f.savefig( outpath+'mortality_rate_heatmap.png', bbox_inches='tight' )
 
-f, ax = plt.subplots(figsize=(90, 60))
-sns.heatmap(increase_rate, fmt="d", ax=ax, cmap=cmap)
 print('plotting Increase Rate')
-plt.title('Increase Rate (logarithmic)')
-f.savefig("../results/increase_rate_heatmap.png")
+f, ax = plt.subplots(figsize=figsize)
+ax = sns.heatmap(increase_rate, fmt="d", ax=ax, cmap=cmap)
+ax.set_xlabel( ax.get_xlabel(), fontsize=fontsize)
+ax.set_ylabel( ax.get_ylabel(), fontsize=fontsize)
+cbar = ax.collections[0].colorbar
+cbar.ax.tick_params(labelsize=fontsize)
+plt.title('Increase Rate (logarithmic)', fontdict={'fontsize':fontsize})
+f.savefig( outpath+'increase_rate_heatmap.png', bbox_inches='tight' )
 
 
